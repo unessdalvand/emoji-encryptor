@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Secure Emoji Encoder with Password</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            direction: ltr;
+            text-align: center;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: rgb(32, 99, 73);
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+        }
+
+        input, button, textarea {
+            padding: 10px;
+            margin: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 300px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .encrypted-image {
+            min-height: 100px;
+            border: 2px dashed #aaa;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 20px 0;
+            background-color: #fafafa;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #emojiOutput {
+            width: 100%;
+            font-family: monospace;
+            font-size: 24px;
+            text-align: center;
+            background-color: #e8f5e8;
+            color: #333;
+            resize: none;
+            height: 60px;
+        }
+
+        .block {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #999;
+        }
+
+        .red { background: #ff4444; }
+        .blue { background: #4488ff; border-radius: 50%; }
+        .green { 
+            width: 0; height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-bottom: 36px solid #44ff44;
+        }
+        .yellow { 
+            width: 26px; height: 26px;
+            background: #ffcc00;
+            transform: rotate(45deg);
+            margin: 5px;
+        }
+        .purple { background: #9b59b6; }
+
+        #decryptedText {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 10px;
+            background-color: #f1f8e9;
+            border-radius: 5px;
+        }
+
+        .copy-btn {
+            background-color: #2196F3;
+        }
+
+        .reset-btn {
+            background-color: #9e9e9e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Secure Emoji Encoder</h1>
+        <p>Encrypt your message with a password and share it as emojis + shapes</p>
+
+        <!-- ENCRYPTION -->
+        <div>
+            <input id="message" type="text" placeholder="Enter message (e.g. Hello)"><br>
+            <input id="password" type="password" placeholder="Enter password"><br>
+            <button onclick="encryptMessage()">🔒 Encrypt</button>
+        </div>
+
+        <!-- VISUAL CODE -->
+        <div class="encrypted-image" id="encryptedImage">
+            <p style="color: #888;">Visual code will appear here</p>
+        </div>
+
+        <!-- EMOJI OUTPUT -->
+        <label>Emoji Code (Copy & Share):</label>
+        <textarea id="emojiOutput" readonly placeholder="Encrypted emojis will appear here..."></textarea>
+        <button class="copy-btn" onclick="copyEmojis()">📋 Copy Emojis</button>
+
+        <!-- DECRYPTION -->
+        <div style="margin-top: 30px;">
+            <h3>🔓 Decrypt</h3>
+            <input id="decryptPassword" type="password" placeholder="Enter password"><br>
+            <input id="pastedEmojis" type="text" placeholder="Paste emojis here..." style="font-size: 20px;"><br>
+            <button onclick="decryptMessage()">🔓 Decrypt</button>
+        </div>
+
+        <!-- DECRYPTED TEXT -->
+        <p id="decryptedText">Decrypted message will appear here</p>
+
+        <!-- RESET -->
+        <button class="reset-btn" onclick="resetAll()">🔄 Reset All</button>
+    </div>
+
+    <script>
+        // Map Base64 chars to emojis (safe subset)
+        const charToEmoji = {
+            'A': '🍎', 'B': '🍌', 'C': '🍒', 'D': '🍇', 'E': '🍊',
+            'F': '🍋', 'G': '🍉', 'H': '🍓', 'I': '🍑', 'J': '🍍',
+            'K': '🥥', 'L': '🥝', 'M': '🍅', 'N': '🍆', 'O': '🥑',
+            'P': '🥦', 'Q': '🥕', 'R': '🌽', 'S': '🌶', 'T': '🥒',
+            'U': '🥬', 'V': '🥭', 'W': '🍐', 'X': '🧶', 'Y': '🌙', 'Z': '🥔',
+            'a': '🍏', 'b': '🪴', 'c': '🌼', 'd': '🌻', 'e': '🪻',
+            'f': '🌴', 'g': '🌱', 'h': '🌿', 'i': '☘️', 'j': '🍀',
+            'k': '🍁', 'l': '🍂', 'm': '🍃', 'n': '🪨', 'o': '🐚',
+            'p': '🪵', 'q': '🌾', 'r': '🌵', 's': '🌷', 't': '🌹',
+            'u': '🥀', 'v': '🌺', 'w': '🌎', 'x': '🌍', 'y': '🌏', 'z': '🌐',
+            '0': '⚽', '1': '🥇', '2': '🥈', '3': '🥉', '4': '🎲',
+            '5': '🎯', '6': '🏀', '7': '🏈', '8': '🚗', '9': '🚀',
+            '+': '➕', '/': '➖', '=': '🟰', ' ': '⬜'
+        };
+
+        // Reverse map
+        const emojiToChar = {};
+        for (let [char, emoji] of Object.entries(charToEmoji)) {
+            emojiToChar[emoji] = char;
+        }
+
+        // Generate encryption key from password
+        async function getKeyFromPassword(password) {
+            const encoder = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                "raw",
+                encoder.encode(password),
+                { name: "PBKDF2" },
+                false,
+                ["deriveKey"]
+            );
+            return await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: encoder.encode("fixed-salt-for-demo-123456"), // در عمل باید تصادفی باشه
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        // Convert bytes to Base64 string
+        function bytesToBase64(bytes) {
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        }
+
+        // Convert Base64 to bytes
+        function base64ToBytes(str) {
+            const binary = atob(str);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        // 🔒 Encrypt message
+        async function encryptMessage() {
+            const message = document.getElementById('message').value;
+            const password = document.getElementById('password').value;
+            const container = document.getElementById('encryptedImage');
+            const emojiOutput = document.getElementById('emojiOutput');
+
+            if (!message) return alert("Please enter a message!");
+            if (!password) return alert("Please enter a password!");
+
+            try {
+                const key = await getKeyFromPassword(password);
+                const encoder = new TextEncoder();
+                const data = encoder.encode(message);
+                const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
+
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    data
+                );
+
+                // Combine IV + encrypted data
+                const encryptedArray = new Uint8Array(encrypted);
+                const combined = new Uint8Array(iv.length + encryptedArray.length);
+                combined.set(iv);
+                combined.set(encryptedArray, iv.length);
+
+                // Convert to Base64
+                const base64Data = bytesToBase64(combined);
+
+                // Clear visual container
+                container.innerHTML = '';
+                let emojiString = '';
+
+                // Map each Base64 char to emoji and shape
+                for (let char of base64Data) {
+                    const emoji = charToEmoji[char] || '❓';
+                    emojiString += emoji;
+
+                    const div = document.createElement('div');
+                    div.className = 'block';
+
+                    if (/[A-I]/.test(char)) div.classList.add('red');
+                    else if (/[J-R]/.test(char)) div.classList.add('blue');
+                    else if (/[S-Z]/.test(char)) div.classList.add('green');
+                    else if (/[a-r]/.test(char)) div.classList.add('yellow');
+                    else if (/[s-z0-9+\/=]/.test(char)) div.classList.add('purple');
+                    else div.style.backgroundColor = '#aaa';
+
+                    container.appendChild(div);
+                }
+
+                emojiOutput.value = emojiString;
+
+            } catch (e) {
+                console.error(e);
+                alert("Encryption failed. Check password.");
+            }
+        }
+
+        // 🔓 Decrypt message from emojis
+        async function decryptMessage() {
+            const emojiInput = document.getElementById('pastedEmojis').value.trim();
+            const password = document.getElementById('decryptPassword').value;
+            const result = document.getElementById('decryptedText');
+
+            if (!emojiInput) return result.textContent = "❌ Paste emojis!";
+            if (!password) return alert("Enter password!");
+
+            try {
+                // Convert emojis back to Base64
+                let base64Str = '';
+                for (let emoji of Array.from(emojiInput)) {
+                    const char = emojiToChar[emoji];
+                    if (!char) throw new Error("Unknown emoji: " + emoji);
+                    base64Str += char;
+                }
+
+                const combined = base64ToBytes(base64Str);
+                const iv = combined.slice(0, 12);
+                const data = combined.slice(12);
+
+                const key = await getKeyFromPassword(password);
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    data
+                );
+
+                const decoder = new TextDecoder("utf-8");
+                const originalText = decoder.decode(decrypted);
+                result.textContent = "✅ Decrypted: " + originalText;
+
+            } catch (e) {
+                console.error(e);
+                result.textContent = "❌ Decryption failed — Wrong password or corrupted data";
+            }
+        }
+
+        // 📋 Copy emojis
+        async function copyEmojis() {
+            const output = document.getElementById('emojiOutput');
+            try {
+                await navigator.clipboard.writeText(output.value);
+                alert("🎉 Emojis copied to clipboard!");
+            } catch (e) {
+                output.select();
+                document.execCommand('copy');
+                alert("Copied (fallback method)");
+            }
+        }
+
+        // 🔄 Reset all
+        function resetAll() {
+            document.getElementById('message').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('pastedEmojis').value = '';
+            document.getElementById('decryptPassword').value = '';
+            document.getElementById('emojiOutput').value = '';
+            document.getElementById('encryptedImage').innerHTML = '<p style="color: #888;">Visual code will appear here</p>';
+            document.getElementById('decryptedText').textContent = 'Decrypted message will appear here';
+        }
+    </script>
+</body>
+</html>
